@@ -2,6 +2,7 @@ package gpio
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"time"
 )
@@ -19,7 +20,16 @@ func NewInput(p uint) Pin {
 		Number: p,
 	}
 	exportGPIO(pin)
-	time.Sleep(10 * time.Millisecond)
+	// Wait while direction file will be accessible
+	// https://github.com/brian-armstrong/gpio/issues/6
+	for i := 0; i < 100; i++ {
+		f, err := os.OpenFile(fmt.Sprintf("/sys/class/gpio/gpio%d/direction", pin.Number), os.O_WRONLY, 0600)
+		if err == nil {
+			f.Close()
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 	pin.direction = inDirection
 	setDirection(pin, inDirection, 0)
 	pin = openPin(pin, false)
@@ -33,7 +43,16 @@ func NewOutput(p uint, initHigh bool) Pin {
 		Number: p,
 	}
 	exportGPIO(pin)
-	time.Sleep(10 * time.Millisecond)
+	// Wait while direction file will be accessible
+	// https://github.com/brian-armstrong/gpio/issues/6
+	for i := 0; i < 100; i++ {
+		f, err := os.OpenFile(fmt.Sprintf("/sys/class/gpio/gpio%d/direction", pin.Number), os.O_WRONLY, 0600)
+		if err == nil {
+			f.Close()
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 	initVal := uint(0)
 	if initHigh {
 		initVal = uint(1)
