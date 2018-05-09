@@ -1,3 +1,6 @@
+The reason of fork: I wanted to fix "timing" problem when creating new port. See issue of brian-armstrong's original project:
+https://github.com/brian-armstrong/gpio/issues/6
+
 GPIO
 ================
 
