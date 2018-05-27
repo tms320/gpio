@@ -4,7 +4,7 @@ import (
 	"container/heap"
 	"fmt"
 	"io"
-	"os"
+	//"os"
 	"syscall"
 	"time"
 )
@@ -93,8 +93,9 @@ func (w *Watcher) notify(fdset *syscall.FdSet) {
 					w.removeFd(fd)
 					continue
 				}
-				fmt.Printf("failed to read pinfile, %s", err)
-				os.Exit(1)
+				//fmt.Printf("failed to read pinfile, %s", err)
+				//os.Exit(1)
+				panic(fmt.Sprintf("failed to read pinfile, %s", err))
 			}
 			msg := WatcherNotification{
 				Pin:   pin.Number,
@@ -116,8 +117,9 @@ func (w *Watcher) fdSelect() {
 	fdset := w.fds.FdSet()
 	changed, err := doSelect(int(w.fds[0])+1, nil, nil, fdset, timeval)
 	if err != nil {
-		fmt.Printf("failed to call syscall.Select, %s", err)
-		os.Exit(1)
+		//fmt.Printf("failed to call syscall.Select, %s", err)
+		//os.Exit(1)
+		panic(fmt.Sprintf("failed to call syscall.Select, %s", err))
 	}
 	if changed {
 		w.notify(fdset)
@@ -203,22 +205,42 @@ func (w *Watcher) watch() {
 // The pin is configured with logic level "active high"
 // and watched for both rising and falling edges.
 // The pin provided should be the pin known by the kernel
-func (w *Watcher) AddPin(p uint) {
-	w.AddPinWithEdgeAndLogic(p, EdgeBoth, ActiveHigh)
+func (w *Watcher) AddPin(p uint) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%v", r)
+		}
+	}()
+	if err := w.AddPinWithEdgeAndLogic(p, EdgeBoth, ActiveHigh); err != nil {
+		return err
+	}
+	return nil
 }
 
 // AddPinWithEdgeAndLogic adds a new pin to be watched for changes.
 // Edges can be configured to be either rising, falling, or both.
 // Logic level can be active high or active low.
 // The pin provided should be the pin known by the kernel.
-func (w *Watcher) AddPinWithEdgeAndLogic(p uint, edge Edge, logicLevel LogicLevel) {
-	pin := NewInput(p)
-	setLogicLevel(pin, logicLevel)
+func (w *Watcher) AddPinWithEdgeAndLogic(p uint, edge Edge, logicLevel LogicLevel) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%v", r)
+		}
+	}()
+	pin, err := NewInput(p)
+	if err != nil {
+		return err
+	}
+	err = setLogicLevel(pin, logicLevel)
+	if err != nil {
+		return err
+	}
 	setEdgeTrigger(pin, edge)
 	w.cmdChan <- watcherCmd{
 		pin:    pin,
 		action: watcherAdd,
 	}
+	return nil
 }
 
 // RemovePin stops the watcher from watching the specified pin
